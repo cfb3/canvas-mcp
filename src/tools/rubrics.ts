@@ -194,6 +194,145 @@ export function registerRubricTools(server: any, canvas: CanvasClient) {
     }
   );
 
+  // Tool: create-rubric
+  server.tool(
+    "create-rubric",
+    "Create a rubric for a course, optionally attaching it to an assignment",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      title: z.string().describe("The title of the rubric"),
+      criteria: z.array(z.object({
+        description: z.string().describe("Criterion description"),
+        longDescription: z.string().optional().describe("Longer explanation of the criterion"),
+        points: z.number().describe("Maximum points for this criterion"),
+        ratings: z.array(z.object({
+          description: z.string().describe("Rating level description"),
+          longDescription: z.string().optional().describe("Longer explanation of this rating level"),
+          points: z.number().describe("Points for this rating level")
+        })).describe("Rating levels for this criterion")
+      })).describe("Array of rubric criteria with their ratings"),
+      assignmentId: z.string().optional().describe("If provided, attach the rubric to this assignment"),
+      useForGrading: z.boolean().default(false).describe("Whether to use this rubric for grading"),
+      freeFormComments: z.boolean().default(true).describe("Whether to allow free-form comments")
+    },
+    async ({ courseId, title, criteria, assignmentId, useForGrading, freeFormComments }: {
+      courseId: string; title: string; criteria: any[]; assignmentId?: string;
+      useForGrading?: boolean; freeFormComments?: boolean;
+    }) => {
+      try {
+        // Transform criteria array into Canvas's indexed hash format
+        const criteriaHash: any = {};
+        criteria.forEach((criterion, i) => {
+          const ratingsHash: any = {};
+          criterion.ratings.forEach((rating: any, j: number) => {
+            ratingsHash[String(j)] = {
+              description: rating.description,
+              long_description: rating.longDescription || "",
+              points: rating.points
+            };
+          });
+          criteriaHash[String(i)] = {
+            description: criterion.description,
+            long_description: criterion.longDescription || "",
+            points: criterion.points,
+            ratings: ratingsHash
+          };
+        });
+
+        const rubricData: any = {
+          title,
+          criteria: criteriaHash,
+          free_form_criterion_comments: freeFormComments !== false ? "1" : "0"
+        };
+
+        let associationData: any = undefined;
+        if (assignmentId) {
+          associationData = {
+            association_id: assignmentId,
+            association_type: "Assignment",
+            use_for_grading: useForGrading ? true : false,
+            purpose: "grading"
+          };
+        }
+
+        const result = await canvas.createRubric(courseId, rubricData, associationData);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to create rubric: ${error.message}`);
+        }
+        throw new Error('Failed to create rubric: Unknown error');
+      }
+    }
+  );
+
+  // Tool: update-rubric
+  server.tool(
+    "update-rubric",
+    "Update an existing rubric's title and/or criteria",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      rubricId: z.string().describe("The ID of the rubric to update"),
+      title: z.string().optional().describe("New title for the rubric"),
+      criteria: z.array(z.object({
+        description: z.string().describe("Criterion description"),
+        longDescription: z.string().optional().describe("Longer explanation of the criterion"),
+        points: z.number().describe("Maximum points for this criterion"),
+        ratings: z.array(z.object({
+          description: z.string().describe("Rating level description"),
+          longDescription: z.string().optional().describe("Longer explanation of this rating level"),
+          points: z.number().describe("Points for this rating level")
+        })).describe("Rating levels for this criterion")
+      })).optional().describe("New criteria array (replaces existing criteria)")
+    },
+    async ({ courseId, rubricId, title, criteria }: {
+      courseId: string; rubricId: string; title?: string; criteria?: any[];
+    }) => {
+      try {
+        const rubricData: any = {};
+        if (title) rubricData.title = title;
+        if (criteria) {
+          const criteriaHash: any = {};
+          criteria.forEach((criterion, i) => {
+            const ratingsHash: any = {};
+            criterion.ratings.forEach((rating: any, j: number) => {
+              ratingsHash[String(j)] = {
+                description: rating.description,
+                long_description: rating.longDescription || "",
+                points: rating.points
+              };
+            });
+            criteriaHash[String(i)] = {
+              description: criterion.description,
+              long_description: criterion.longDescription || "",
+              points: criterion.points,
+              ratings: ratingsHash
+            };
+          });
+          rubricData.criteria = criteriaHash;
+        }
+
+        const result = await canvas.updateRubric(courseId, rubricId, rubricData);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to update rubric: ${error.message}`);
+        }
+        throw new Error('Failed to update rubric: Unknown error');
+      }
+    }
+  );
+
   // Tool: attach-rubric-to-assignment
   server.tool(
     "attach-rubric-to-assignment",

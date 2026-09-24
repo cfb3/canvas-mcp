@@ -154,6 +154,16 @@ export class CanvasClient {
   async attachRubricToAssignment(courseId: string, assignmentId: string, rubricId: string) {
     return this.put(`/api/v1/courses/${courseId}/assignments/${assignmentId}?rubric_id=${encodeURIComponent(rubricId)}`);
   }
+  async createRubric(courseId: string, rubricData: any, associationData?: any) {
+    const data: any = { rubric: rubricData };
+    if (associationData) {
+      data.rubric_association = associationData;
+    }
+    return this.post(`/api/v1/courses/${courseId}/rubrics`, data);
+  }
+  async updateRubric(courseId: string, rubricId: string, rubricData: any) {
+    return this.put(`/api/v1/courses/${courseId}/rubrics/${rubricId}`, { rubric: rubricData });
+  }
 
   // --- Students ---
   async listStudents(courseId: string, params: any = {}, options: { anonymous?: boolean } = {}) {

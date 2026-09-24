@@ -4,6 +4,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import * as dotenv from "dotenv";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 import { CanvasConfig, Course, Rubric } from './types.js';
 import { CanvasClient } from './canvasClient.js';
 import { registerCourseTools } from './tools/courses.js';
@@ -26,15 +29,24 @@ const server = new McpServer({
   version: "1.0.0"
 });
 
-// Read configuration from environment variables
+// Read configuration: env var first, then ~/.canvas_token file fallback
+let apiToken = process.env.CANVAS_API_TOKEN || "";
+if (!apiToken) {
+  try {
+    apiToken = readFileSync(join(homedir(), ".canvas_token"), "utf-8").trim();
+  } catch {
+    // file not found or unreadable — will fail validation below
+  }
+}
+
 const config: CanvasConfig = {
-  apiToken: process.env.CANVAS_API_TOKEN || "",
+  apiToken,
   baseUrl: process.env.CANVAS_BASE_URL || "https://fhict.instructure.com",
 };
 
 // Validate configuration
 if (!config.apiToken) {
-  console.error("Error: CANVAS_API_TOKEN environment variable is required");
+  console.error("Error: Set CANVAS_API_TOKEN env var or create ~/.canvas_token file");
   process.exit(1);
 }
 
