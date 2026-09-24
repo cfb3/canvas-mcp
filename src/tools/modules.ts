@@ -135,4 +135,142 @@ export function registerModuleTools(server: any, canvas: CanvasClient) {
       }
     }
   );
+
+  // Tool: create-module
+  server.tool(
+    "create-module",
+    "Create a module in a course. New modules start unpublished; publish with update-module.",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      name: z.string().describe("The module name"),
+      position: z.number().optional().describe("1-based position in the module list")
+    },
+    async ({ courseId, name, position }: { courseId: string; name: string; position?: number }) => {
+      try {
+        const mod: any = await canvas.createModule(courseId, { name, ...(position !== undefined ? { position } : {}) });
+        return {
+          content: [{ type: "text", text: `Created module "${mod.name}" (ID: ${mod.id}, position ${mod.position}, ${mod.published ? 'published' : 'unpublished'}).` }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to create module: ${error.message}`);
+        }
+        throw new Error('Failed to create module: Unknown error');
+      }
+    }
+  );
+
+  // Tool: update-module
+  server.tool(
+    "update-module",
+    "Rename, reorder, publish, or unpublish a module. Only the fields you pass change.",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      moduleId: z.string().describe("The ID of the module"),
+      name: z.string().optional(),
+      position: z.number().optional().describe("1-based position in the module list"),
+      published: z.boolean().optional()
+    },
+    async (args: any) => {
+      const { courseId, moduleId, ...fields } = args;
+      try {
+        const mod: any = await canvas.updateModule(courseId, moduleId, fields);
+        return {
+          content: [{ type: "text", text: `Module "${mod.name}" (ID: ${mod.id}): position ${mod.position}, ${mod.published ? 'published' : 'unpublished'}.` }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to update module: ${error.message}`);
+        }
+        throw new Error('Failed to update module: Unknown error');
+      }
+    }
+  );
+
+  // Tool: delete-module
+  server.tool(
+    "delete-module",
+    "Delete a module. The pages, assignments, and files it links to are NOT deleted; only the module and its item links are.",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      moduleId: z.string().describe("The ID of the module")
+    },
+    async ({ courseId, moduleId }: { courseId: string; moduleId: string }) => {
+      try {
+        const mod: any = await canvas.deleteModule(courseId, moduleId);
+        return {
+          content: [{ type: "text", text: `Deleted module "${mod?.name ?? moduleId}" from course ${courseId}.` }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to delete module: ${error.message}`);
+        }
+        throw new Error('Failed to delete module: Unknown error');
+      }
+    }
+  );
+
+  // Tool: add-module-item
+  server.tool(
+    "add-module-item",
+    "Add an item to a module. type Page needs pageUrl (the page slug); ExternalUrl needs externalUrl; Assignment, Quiz, File, and Discussion need contentId; SubHeader needs only title.",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      moduleId: z.string().describe("The ID of the module"),
+      type: z.enum(["Page", "ExternalUrl", "Assignment", "Quiz", "File", "Discussion", "SubHeader"]),
+      title: z.string().optional().describe("Display title (required for ExternalUrl and SubHeader)"),
+      pageUrl: z.string().optional().describe("Page slug, for type Page"),
+      externalUrl: z.string().optional().describe("URL, for type ExternalUrl"),
+      contentId: z.string().optional().describe("Canvas id of the assignment, quiz, file, or discussion"),
+      newTab: z.boolean().default(true).describe("Open an ExternalUrl in a new tab"),
+      position: z.number().optional().describe("1-based position within the module"),
+      indent: z.number().optional().describe("Indent level, 0 to 5")
+    },
+    async (args: any) => {
+      const { courseId, moduleId, type, title, pageUrl, externalUrl, contentId, newTab, position, indent } = args;
+      try {
+        const item: any = { type };
+        if (title !== undefined) item.title = title;
+        if (pageUrl !== undefined) item.page_url = pageUrl;
+        if (externalUrl !== undefined) item.external_url = externalUrl;
+        if (contentId !== undefined) item.content_id = contentId;
+        if (type === "ExternalUrl") item.new_tab = newTab;
+        if (position !== undefined) item.position = position;
+        if (indent !== undefined) item.indent = indent;
+        const created: any = await canvas.createModuleItem(courseId, moduleId, item);
+        return {
+          content: [{ type: "text", text: `Added [${created.type}] "${created.title}" (item ID: ${created.id}, position ${created.position}) to module ${moduleId}.` }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to add module item: ${error.message}`);
+        }
+        throw new Error('Failed to add module item: Unknown error');
+      }
+    }
+  );
+
+  // Tool: delete-module-item
+  server.tool(
+    "delete-module-item",
+    "Remove an item from a module. The page, assignment, or file it points to is not deleted.",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      moduleId: z.string().describe("The ID of the module"),
+      itemId: z.string().describe("The ID of the module item (from list-module-items)")
+    },
+    async ({ courseId, moduleId, itemId }: { courseId: string; moduleId: string; itemId: string }) => {
+      try {
+        const item: any = await canvas.deleteModuleItem(courseId, moduleId, itemId);
+        return {
+          content: [{ type: "text", text: `Removed "${item?.title ?? itemId}" from module ${moduleId}.` }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to delete module item: ${error.message}`);
+        }
+        throw new Error('Failed to delete module item: Unknown error');
+      }
+    }
+  );
 } 

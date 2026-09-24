@@ -142,6 +142,8 @@ export function registerAssignmentTools(server: any, canvas: CanvasClient) {
       published: z.boolean().optional(),
       grading_type: z.string().optional(),
       assignment_group_id: z.number().optional(),
+      unlock_at: z.string().optional().describe("Available from (ISO 8601)"),
+      lock_at: z.string().optional().describe("Available until (ISO 8601)"),
     },
     async (args: any) => {
       const { courseId, ...fields } = args;
@@ -167,13 +169,15 @@ export function registerAssignmentTools(server: any, canvas: CanvasClient) {
   // Tool: update-assignment
   server.tool(
     "update-assignment",
-    "Update an assignment. All fields are optional except courseId and assignmentId.",
+    "Update an assignment. All fields are optional except courseId and assignmentId. To move a due date past an existing lock date, send the new due_at together with lock_at (a later date, or null to clear it) in the same call.",
     {
       courseId: z.string().describe("The ID of the course"),
       assignmentId: z.string().describe("The ID of the assignment"),
       name: z.string().optional(),
       description: z.string().optional(),
-      due_at: z.string().optional(),
+      due_at: z.string().nullable().optional().describe("Due date (ISO 8601), or null to clear"),
+      unlock_at: z.string().nullable().optional().describe("Available from (ISO 8601), or null to clear"),
+      lock_at: z.string().nullable().optional().describe("Available until (ISO 8601), or null to clear"),
       points_possible: z.number().optional(),
       submission_types: z.array(z.string()).optional(),
       published: z.boolean().optional(),

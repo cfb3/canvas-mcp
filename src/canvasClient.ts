@@ -85,6 +85,12 @@ export class CanvasClient {
   async postAnnouncement(courseId: string, data: any) {
     return this.post(`/api/v1/courses/${courseId}/discussion_topics`, data);
   }
+  async getCourse(courseId: string, params: any = {}) {
+    return this.get(`/api/v1/courses/${courseId}`, params);
+  }
+  async updateCourse(courseId: string, courseData: any) {
+    return this.put(`/api/v1/courses/${courseId}`, { course: courseData });
+  }
 
   // --- Assignments ---
   async listCourseAssignments(courseId: string, params: any = {}, options: { anonymous?: boolean } = {}) {
@@ -105,8 +111,16 @@ export class CanvasClient {
   async listAssignmentGroups(courseId: string) {
     return this.get(`/api/v1/courses/${courseId}/assignment_groups`);
   }
+  // Canvas takes assignment group fields top-level (name, position, group_weight, rules),
+  // not nested under an "assignment_group" key; nested fields are silently ignored.
   async createAssignmentGroup(courseId: string, data: any) {
     return this.post(`/api/v1/courses/${courseId}/assignment_groups`, data);
+  }
+  async updateAssignmentGroup(courseId: string, groupId: string, data: any) {
+    return this.put(`/api/v1/courses/${courseId}/assignment_groups/${groupId}`, data);
+  }
+  async deleteAssignmentGroup(courseId: string, groupId: string, params: any = {}) {
+    return this.delete(`/api/v1/courses/${courseId}/assignment_groups/${groupId}`, params);
   }
 
   // --- Modules ---
@@ -121,6 +135,21 @@ export class CanvasClient {
   }
   async updateModulePublish(courseId: string, moduleId: string, data: any) {
     return this.put(`/api/v1/courses/${courseId}/modules/${moduleId}`, data);
+  }
+  async createModule(courseId: string, moduleData: any) {
+    return this.post(`/api/v1/courses/${courseId}/modules`, { module: moduleData });
+  }
+  async updateModule(courseId: string, moduleId: string, moduleData: any) {
+    return this.put(`/api/v1/courses/${courseId}/modules/${moduleId}`, { module: moduleData });
+  }
+  async deleteModule(courseId: string, moduleId: string) {
+    return this.delete(`/api/v1/courses/${courseId}/modules/${moduleId}`);
+  }
+  async createModuleItem(courseId: string, moduleId: string, itemData: any) {
+    return this.post(`/api/v1/courses/${courseId}/modules/${moduleId}/items`, { module_item: itemData });
+  }
+  async deleteModuleItem(courseId: string, moduleId: string, itemId: string) {
+    return this.delete(`/api/v1/courses/${courseId}/modules/${moduleId}/items/${itemId}`);
   }
 
   // --- Pages ---
@@ -138,6 +167,9 @@ export class CanvasClient {
   }
   async updateOrCreatePage(courseId: string, pageUrl: string, data: any) {
     return this.put(`/api/v1/courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`, data);
+  }
+  async deletePage(courseId: string, pageUrl: string) {
+    return this.delete(`/api/v1/courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`);
   }
 
   // --- Rubrics ---

@@ -303,6 +303,29 @@ export function registerPageTools(server: any, canvas: CanvasClient) {
     }
   );
 
+  // Tool: delete-page
+  server.tool(
+    "delete-page",
+    "Delete a wiki page by URL slug. Canvas refuses to delete the course front page; set another front page first. Module items pointing at the page go with it.",
+    {
+      courseId: z.string().describe("The ID of the course"),
+      pageUrl: z.string().describe("The page's URL slug")
+    },
+    async ({ courseId, pageUrl }: { courseId: string; pageUrl: string }) => {
+      try {
+        const page: any = await canvas.deletePage(courseId, pageUrl);
+        return {
+          content: [{ type: "text", text: `Deleted page "${page?.title ?? pageUrl}" (${pageUrl}) from course ${courseId}.` }]
+        };
+      } catch (error: any) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to delete page: ${error.message}`);
+        }
+        throw new Error('Failed to delete page: Unknown error');
+      }
+    }
+  );
+
   // Tool: update-page-content
   server.tool(
     "update-page-content",
